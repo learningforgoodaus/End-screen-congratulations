@@ -28,6 +28,64 @@
             position: relative;
         }
 
+        /* Simplified Overlay Screen */
+        #reveal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #513873;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+
+        #reveal-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .overlay-content {
+            text-align: center;
+            color: #F2F2F2;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        /* Tactile Button Styling with Right Shadow */
+        .reveal-btn {
+            background-color: #C6B4D9;
+            color: #413659;
+            padding: 1.25rem 3rem;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1.25rem;
+            margin-top: 2rem;
+            cursor: pointer;
+            border: none;
+            /* Added horizontal offset to box-shadow for the "right" shadow effect */
+            box-shadow: 4px 4px 0px #9C7F9D, 0 10px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.1s ease-in-out;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .reveal-btn:hover {
+            transform: translate(-1px, -1px);
+            background-color: #d1c3e2;
+            box-shadow: 6px 6px 0px #9C7F9D, 0 12px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        .reveal-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 1px 1px 0px #9C7F9D, 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
         #confetti-canvas {
             position: fixed;
             top: 0;
@@ -35,7 +93,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 100; /* Foreground */
+            z-index: 100; /* Fireworks in foreground */
         }
 
         .full-width-container {
@@ -48,9 +106,12 @@
             z-index: 10;
             opacity: 0;
             transform: translateY(10px);
-            animation: fadeIn 0.8s ease-out forwards;
             border-top: 8px solid #513873;
             border-bottom: 8px solid #C6B4D9;
+        }
+
+        .full-width-container.visible {
+            animation: fadeIn 0.8s ease-out forwards;
         }
 
         @keyframes fadeIn {
@@ -96,9 +157,19 @@
 </head>
 <body>
 
+    <!-- Reveal Overlay -->
+    <div id="reveal-overlay">
+        <div class="overlay-content">
+            <h2 class="text-4xl font-extrabold mb-8 tracking-tight">Course Completion Message</h2>
+            <button class="reveal-btn" onclick="revealMessage()">
+                View Message
+            </button>
+        </div>
+    </div>
+
     <canvas id="confetti-canvas"></canvas>
 
-    <div class="full-width-container">
+    <div id="main-content" class="full-width-container">
         <div class="content-wrapper">
             <div class="icon-container">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -113,7 +184,7 @@
             <div class="callout-box">
                 <p style="color: #513873;" class="text-lg font-bold mb-2">Applying your skills in the workplace:</p>
                 <p class="brand-text text-md leading-relaxed">
-                    Your commitment to learning is the first step toward a safer community. As you return to work, use this new knowledge to foster a safe, supportive, and inclusive culture for all colleagues and clients.
+                    Your commitment to learning is the first step toward a safer community. As you return to work, use this new knowledge to foster a safe, supportive, and inclusive culture for all colleagues and those in your work environment.
                 </p>
             </div>
         </div>
@@ -122,7 +193,11 @@
     <script>
         const canvas = document.getElementById('confetti-canvas');
         const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('reveal-overlay');
+        const mainContent = document.getElementById('main-content');
+        
         let particles = [];
+        let animationActive = false;
         const brandPalette = ['#C6B4D9', '#513873', '#413659', '#9C7F9D'];
         
         function resize() {
@@ -140,19 +215,17 @@
                 this.size = Math.random() * 6 + 4;
                 
                 if (isBurst) {
-                    // Firework-like radial velocity
                     const angle = Math.random() * Math.PI * 2;
                     const force = Math.random() * 12 + 4;
                     this.speedX = Math.cos(angle) * force;
                     this.speedY = Math.sin(angle) * force;
                 } else {
-                    // Normal falling velocity
                     this.speedX = Math.random() * 4 - 2;
                     this.speedY = Math.random() * -15 - 5;
                 }
 
                 this.gravity = 0.15;
-                this.friction = 0.96; // Air resistance
+                this.friction = 0.96;
                 this.color = brandPalette[Math.floor(Math.random() * brandPalette.length)];
                 this.rotation = Math.random() * 360;
                 this.rotationSpeed = Math.random() * 10 - 5;
@@ -177,23 +250,35 @@
                 ctx.rotate(this.rotation * Math.PI / 180);
                 ctx.globalAlpha = Math.max(0, this.opacity);
                 ctx.fillStyle = this.color;
-                // Draw rectangles like confetti
                 ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size * 1.5);
                 ctx.restore();
             }
         }
 
         function createBurst(x, y) {
-            const particleCount = 40;
+            const particleCount = 45;
             for (let i = 0; i < particleCount; i++) {
                 particles.push(new Particle(x, y, true));
+            }
+        }
+
+        function revealMessage() {
+            overlay.classList.add('hidden');
+            mainContent.classList.add('visible');
+            
+            if (!animationActive) {
+                animationActive = true;
+                // Burst sequence
+                setTimeout(() => createBurst(canvas.width * 0.2, canvas.height * 0.4), 400);
+                setTimeout(() => createBurst(canvas.width * 0.8, canvas.height * 0.4), 700);
+                setTimeout(() => createBurst(canvas.width * 0.5, canvas.height * 0.3), 1000);
+                animate();
             }
         }
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Randomly trigger new bursts
             if (Math.random() < 0.04) {
                 const x = Math.random() * canvas.width;
                 const y = Math.random() * (canvas.height * 0.7);
@@ -210,15 +295,6 @@
             }
             requestAnimationFrame(animate);
         }
-
-        window.onload = () => {
-            // Initial grand opening bursts
-            setTimeout(() => createBurst(canvas.width * 0.2, canvas.height * 0.4), 200);
-            setTimeout(() => createBurst(canvas.width * 0.8, canvas.height * 0.4), 500);
-            setTimeout(() => createBurst(canvas.width * 0.5, canvas.height * 0.3), 800);
-            
-            animate();
-        };
     </script>
 </body>
 </html>
